@@ -113,7 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--api-key",
         type=str,
         default=None,
-        help="Gemini API key (or set GEMINI_API_KEY env var)",
+        help="AI API key (or set AGENTROUTER_API_KEY env var)",
     )
     analyze_cmd.add_argument(
         "--output", "-o",
@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--api-key",
         type=str,
         default=None,
-        help="Gemini API key for AI analysis (optional)",
+        help="AI API key for image analysis (or set AGENTROUTER_API_KEY env var)",
     )
     full_cmd.add_argument(
         "--headed",

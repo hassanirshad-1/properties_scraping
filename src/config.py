@@ -61,9 +61,10 @@ BAYUT_RENT_APARTMENTS = {
     "alexandria": f"{BAYUT_BASE}/en/to-rent/apartments/alexandria/",
 }
 
-# === AI Analysis ===
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.0-flash"
+# === AI Analysis (OpenAI-compatible API via SwiftRouter) ===
+AI_BASE_URL = os.environ.get("AGENTROUTER_BASE_URL", "https://api.swiftrouter.com/v1/")
+AI_API_KEY = os.environ.get("AGENTROUTER_API_KEY", "")
+AI_MODEL = os.environ.get("AGENTROUTER_MODEL_NAME", "kimi-k2.5")
 
-# Images to analyze per listing (to control costs)
-MAX_IMAGES_TO_ANALYZE = 5
+# Images to analyze per listing (more = better analysis, higher cost)
+MAX_IMAGES_TO_ANALYZE = 2
