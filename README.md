@@ -1,132 +1,147 @@
-# 🏠 Egypt Property Scraper
+# Bawab Property Scraper & AI Pipeline
 
-A powerful Python CLI tool that scrapes Egyptian property rental listings from **dubizzle.com.eg**, downloads all property images, and outputs structured JSON + CSV data.
+Automated property scraping + AI image analysis + database sync for [Bawab](https://bawab.app).
 
-## ✨ Features
+## What It Does
 
-- 🔍 **Smart Scraping** — Extracts title, price, bedrooms, bathrooms, area, location, description, features, and listed date
-- 🖼️ **Accurate Image Extraction** — Clicks into each listing's gallery to download ONLY that listing's photos (no similar listings junk)
-- 📊 **Multiple Output Formats** — JSON (full data), CSV (summary), and downloaded images organized by listing ID
-- ⚡ **Configurable** — Set city, listing count, headless/headed mode
-- 🛡️ **Anti-Detection** — Random delays, scroll behavior, and stealth browser settings
+```
+Dubizzle.com.eg → Scrape Listings → Download Photos → AI Analyzes Images → Push to Bawab DB
+                                                          ↓
+                                              search_tags, floor estimate,
+                                              view type, sun direction,
+                                              interior quality, features
+```
 
-## 📋 Requirements
+**Every 6 hours** (configurable), the system:
+1. Scrapes 100+ property listings from Dubizzle Egypt
+2. Downloads all gallery photos for each listing
+3. Sends photos to AI (Kimi K2.5) for visual analysis
+4. Syncs everything into Bawab's Postgres database
+5. Enables "smart search" — users type natural language, AI matches against analyzed data
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) package manager
-
-## 🚀 Quick Start
-
-### 1. Clone & Install
+## Quick Start
 
 ```bash
+# 1. Clone & install
 git clone https://github.com/hassanirshad-1/properties_scraping.git
 cd properties_scraping
-
-# Install uv (if you don't have it)
 pip install uv
-
-# Install dependencies
 uv sync
-
-# Install browser (required for scraping)
 uv run playwright install chromium
+
+# 2. Set environment variables (copy .env.example → .env)
+cp .env.example .env
+# Edit .env with your API keys
+
+# 3. Run the API server (auto-schedules scraping)
+uv run python -m src.server
 ```
 
-### 2. Run the Scraper
+The server starts at `http://localhost:8000` and auto-scrapes every 6 hours.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check |
+| `POST` | `/api/scrape` | Trigger a scrape job |
+| `GET` | `/api/status` | Check current job status |
+| `GET` | `/api/listings` | Get scraped listings |
+| `GET` | `/api/search?q=...` | Smart search |
+
+### Trigger a Scrape
+```bash
+curl -X POST http://localhost:8000/api/scrape \
+  -H "Content-Type: application/json" \
+  -d '{"city": "cairo", "limit": 50, "analyze": true, "sync_db": true}'
+```
+
+### Smart Search
+```bash
+curl "http://localhost:8000/api/search?q=modern+furnished+apartment+with+balcony"
+```
+
+## CLI Usage (Manual Scraping)
 
 ```bash
-# Scrape 20 listings from Cairo (with browser visible)
-uv run python -m src.cli full --source dubizzle --city cairo --limit 20 --headed
+# Scrape only
+uv run python -m src.cli scrape --source dubizzle --city cairo --limit 20
 
-# Scrape 100 listings (headless - faster)
-uv run python -m src.cli full --source dubizzle --city cairo --limit 100
+# Full pipeline (scrape + download images + analyze)
+uv run python -m src.cli full --source dubizzle --city cairo --limit 20
 
-# Just scrape data without downloading images
-uv run python -m src.cli scrape --source dubizzle --city cairo --limit 50
-
-# Just download images from existing listings.json
-uv run python -m src.cli download
+# Analyze existing listings
+uv run python -m src.cli analyze
 ```
 
-### 3. View Output
+## Environment Variables
 
-All output is saved to the `output/` directory:
+```env
+# AI Image Analysis
+AGENTROUTER_BASE_URL=https://api.swiftrouter.com/v1/
+AGENTROUTER_API_KEY=your-key
+AGENTROUTER_MODEL_NAME=kimi-k2.5
 
-```
-output/
-├── listings.json          # Full listing data (all fields + image URLs)
-├── listings_summary.csv   # Summary table (price, beds, area, location)
-├── stats.json             # Scrape statistics
-└── images/                # Downloaded images organized by listing ID
-    ├── 503425644/
-    │   ├── 1.jpeg
-    │   ├── 2.jpeg
-    │   └── ...
-    └── 503304700/
-        ├── 1.jpeg
-        └── ...
-```
+# Bawab Database
+DATABASE_URL=postgres://user:pass@host:5432/bawab
 
-## 📦 Output Data
+# Auto-Scheduler
+ENABLE_SCHEDULER=true
+SCRAPE_INTERVAL_HOURS=6
+SCRAPE_CITY=cairo
+SCRAPE_LIMIT=100
 
-Each listing in `listings.json` contains:
-
-| Field | Example |
-|-------|---------|
-| `title` | "Luxury Furnished Apartment for Rent" |
-| `price` | 50000.0 |
-| `price_currency` | "EGP" |
-| `price_period` | "monthly" |
-| `property_type` | "apartment" |
-| `bedrooms` | 3 |
-| `bathrooms` | 2 |
-| `area_sqm` | 182.0 |
-| `furnished` | true |
-| `location_city` | "Cairo" |
-| `location_area` | "New Cairo" |
-| `location_compound` | "Rehab City" |
-| `description` | "Full property description..." |
-| `features` | ["Balcony", "Pool", "Security", ...] |
-| `image_urls` | [list of image URLs] |
-| `local_images` | [list of downloaded image paths] |
-
-## ⚙️ CLI Options
-
-```
-Usage: python -m src.cli [OPTIONS] COMMAND
-
-Commands:
-  scrape    - Scrape listing data only
-  download  - Download images from existing listings.json
-  full      - Full pipeline: scrape + download images
-
-Options:
-  --source    Source website (default: dubizzle)
-  --city      City to scrape (default: cairo)
-  --limit     Max number of listings (default: 10)
-  --headed    Show browser window (useful for debugging)
-  -v          Verbose logging
+# Server
+PORT=8000
 ```
 
-## 🏗️ Project Structure
+## Database Migration
+
+Before first sync, run the migration against Bawab's database:
+
+```bash
+psql $DATABASE_URL -f migrations/001_add_ai_search_columns.sql
+```
+
+This adds: `source_url`, `source_id`, `ai_tags`, `ai_vibe`, `ai_analysis` columns + GIN indexes for fast tag search.
+
+## Architecture
 
 ```
 src/
-├── cli.py              # CLI entry point
-├── config.py           # URLs and settings
-├── models.py           # PropertyListing data model
+├── server.py          # FastAPI server + scheduler
+├── cli.py             # CLI interface
+├── config.py          # Configuration
+├── db_sync.py         # Bawab database sync service
 ├── scraper/
-│   ├── base.py         # Base scraper (browser, HTTP, shared logic)
-│   └── dubizzle.py     # Dubizzle.com.eg scraper
-├── downloader.py       # Image downloader
-└── writer.py           # JSON/CSV output writer
+│   ├── base.py        # Base scraper (Playwright)
+│   ├── dubizzle.py    # Dubizzle.com.eg scraper
+│   └── models.py      # PropertyListing data model
+└── images/
+    ├── downloader.py  # Image download service
+    └── analyzer.py    # AI image analysis (Kimi K2.5)
+
+bawab_patches/
+└── enhanced_search.ts # Drop-in replacement for Bawab's search route
+
+migrations/
+└── 001_add_ai_search_columns.sql
 ```
 
-## 📝 Notes
+## AI Analysis Output
 
-- The scraper uses Playwright with Chromium for browser automation
-- Each listing takes ~5-8 seconds (page load + gallery extraction + delay)
-- 300 listings ≈ 30-45 minutes
-- Images are downloaded at their original resolution
-- The tool respects rate limits with random delays between requests
+For each listing, the AI returns:
+```json
+{
+  "estimated_floor": "1-2",
+  "view_type": "compound",
+  "sun_direction": "south",
+  "interior_quality": "luxury",
+  "furniture_style": "furnished-modern",
+  "notable_features": ["balcony", "marble floors", "AC"],
+  "search_tags": ["modern apartment", "furnished", "balcony", "natural light"],
+  "overall_vibe": "Bright, airy apartment with minimalist beige interiors."
+}
+```
+
+These tags power the **smart search** — users can type "3rd floor north facing garden view" and get matching results.

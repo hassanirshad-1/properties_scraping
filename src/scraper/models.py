@@ -18,8 +18,10 @@ class PropertyListing:
     source_url: str = ""                  # Original listing URL
 
     # === Core Info ===
-    title: str = ""                       # Listing title/headline
-    description: str = ""                 # Full description text
+    title: str = ""                       # Listing title/headline (English)
+    title_ar: str = ""                    # Listing title (Arabic)
+    description: str = ""                 # Full description text (English)
+    description_ar: str = ""              # Full description text (Arabic)
 
     # === Pricing ===
     price: float = 0.0                    # Rent price
