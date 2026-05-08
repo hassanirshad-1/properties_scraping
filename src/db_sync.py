@@ -166,14 +166,37 @@ class BawabSyncService:
     async def _sync_one(self, conn: asyncpg.Connection, listing: PropertyListing) -> bool:
         """Insert a single listing. Returns True if inserted, False if skipped (duplicate)."""
 
-        # Deduplicate by source_url — skip if already imported
-        existing = await conn.fetchval(
-            "SELECT id FROM properties WHERE title_en = $1 AND area = $2 AND price = $3 LIMIT 1",
-            listing.title, listing.area_sqm, listing.price,
-        )
-        if existing:
-            logger.debug("Listing %s already exists (property %s), skipping.", listing.id, existing)
-            return False
+        # === DEDUPLICATION (3 layers) ===
+        
+        # Layer 1: Check by source_id (Dubizzle listing ID — most reliable)
+        if listing.id:
+            existing = await conn.fetchval(
+                "SELECT id FROM properties WHERE source_id = $1 LIMIT 1",
+                listing.id,
+            )
+            if existing:
+                logger.debug("Listing %s already in DB (source_id match → %s), skipping.", listing.id, existing)
+                return False
+
+        # Layer 2: Check by source_url
+        if listing.source_url:
+            existing = await conn.fetchval(
+                "SELECT id FROM properties WHERE source_url = $1 LIMIT 1",
+                listing.source_url,
+            )
+            if existing:
+                logger.debug("Listing %s already in DB (source_url match → %s), skipping.", listing.id, existing)
+                return False
+
+        # Layer 3: Check by title + price + area (catches re-listed properties)
+        if listing.title and listing.price:
+            existing = await conn.fetchval(
+                "SELECT id FROM properties WHERE title_en = $1 AND price = $2 AND area = $3 LIMIT 1",
+                listing.title, listing.price, listing.area_sqm,
+            )
+            if existing:
+                logger.debug("Listing %s already in DB (title+price match → %s), skipping.", listing.id, existing)
+                return False
 
         ai = listing.ai_analysis or {}
 

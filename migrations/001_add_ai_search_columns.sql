@@ -5,7 +5,7 @@
 
 -- 1. Add source tracking (for deduplication of scraped listings)
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS source_url TEXT;
-ALTER TABLE properties ADD COLUMN IF NOT EXISTS source_id TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS source_id TEXT UNIQUE;
 
 -- 2. Add AI analysis columns (filled by the scraper's AI image analysis)
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS ai_tags TEXT[] DEFAULT '{}';
