@@ -1,0 +1,15 @@
+[project]
+name = "property-scrapper"
+version = "0.1.0"
+description = "Egypt property scraper for bawab.app - scrapes listings from dubizzle, bayut, and propertyfinder"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.49.0",
+    "httpx>=0.28.0",
+    "rich>=13.9.0",
+    "pillow>=11.0.0",
+    "google-genai>=1.0.0",
+]
+
+[project.scripts]
+scrape = "src.cli:main"
